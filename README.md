@@ -1,5 +1,3 @@
-# Big-Data-Workshops
-
 # Módulo 1: Introducción a Hadoop y Hive (Standalone Setup)
 
 ## Objetivos
@@ -145,30 +143,68 @@ Guarda este archivo en la raíz como `docker-compose.yml`.
 
 ---
 
-## Paso 5: Ejecutar Comandos Básicos y Consultas
-### Hadoop
-1. Crear directorios:
+## Paso 5: Subir los Datasets y Configurar Hive
+### Subir Archivos al HDFS
+1. **Crea un directorio para los datasets:**
    ```bash
-   docker exec -it namenode hadoop fs -mkdir -p /user/hive/warehouse
+   docker exec -it namenode hadoop fs -mkdir -p /datasets
    ```
-2. Listar directorios:
+2. **Sube los archivos de prueba al HDFS:**
    ```bash
-   docker exec -it namenode hadoop fs -ls /
+   docker exec -it namenode hadoop fs -put word_count.txt /datasets/
+   docker exec -it namenode hadoop fs -put sales.csv /datasets/
+   docker exec -it namenode hadoop fs -put employees.csv /datasets/
    ```
 
-### Hive
-1. Conectarse a Hive:
+### Crear Tablas en Hive
+1. **Conéctate a HiveServer2:**
    ```bash
    docker exec -it hive-server beeline -u jdbc:hive2://localhost:10000
    ```
-2. Crear tabla:
+2. **Crea las tablas externas en Hive:**
    ```sql
-   CREATE TABLE sales (id INT, product STRING, price FLOAT) STORED AS TEXTFILE;
+   -- Tabla para Conteo de Palabras
+   CREATE TABLE word_count (word STRING)
+   ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY ' '
+   STORED AS TEXTFILE
+   LOCATION '/datasets/word_count.txt';
+
+   -- Tabla para Ventas
+   CREATE TABLE sales (id INT, product STRING, price FLOAT, quantity INT)
+   ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY ','
+   STORED AS TEXTFILE
+   LOCATION '/datasets/sales.csv';
+
+   -- Tabla para Empleados
+   CREATE TABLE employees (id INT, name STRING, department STRING, salary FLOAT)
+   ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY ','
+   STORED AS TEXTFILE
+   LOCATION '/datasets/employees.csv';
    ```
-3. Consultar datos:
-   ```sql
-   SELECT * FROM sales;
-   ```
+
+### Consultas de Prueba en Hive
+- **Conteo de Palabras:**
+  ```sql
+  SELECT word, COUNT(*) AS word_count
+  FROM word_count
+  GROUP BY word;
+  ```
+- **Agrupaciones y Operaciones:**
+  ```sql
+  SELECT product, SUM(price * quantity) AS total_sales, COUNT(*) AS transactions
+  FROM sales
+  GROUP BY product;
+  ```
+- **Filtros:**
+  ```sql
+  SELECT name, department, salary
+  FROM employees
+  WHERE department = 'Engineering'
+  AND salary > 60000;
+  ```
 
 ---
 
