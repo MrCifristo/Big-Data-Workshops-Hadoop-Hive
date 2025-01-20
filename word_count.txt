@@ -1,0 +1,5 @@
+hadoop hive bigdata
+hive hadoop queries
+queries hadoop hive hive
+bigdata hadoop bigdata
+hive hive bigdata queries
