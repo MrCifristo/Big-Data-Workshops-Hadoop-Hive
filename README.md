@@ -1,9 +1,16 @@
-# Módulo 1: Introducción a Hadoop y Hive (Standalone Setup)
+# Guía Completa de Instalación y Configuración de Hadoop y Hive en Docker
 
-## Objetivos
-1. Demostrar cómo funciona Hadoop (HDFS y comandos básicos).
-2. Demostrar cómo funciona Hive y cómo se conecta a Hadoop.
-3. Mostrar cómo funciona todo con un único NameNode.
+## Introducción
+Esta guía detallada tiene como objetivo ayudarte a configurar un entorno funcional de Hadoop y Hive utilizando Docker. Aprenderás a preparar tu entorno, configurar servicios clave como NameNode y DataNode, y realizar operaciones básicas en HDFS y Hive.
+
+---
+
+## Módulo 1: Introducción a Hadoop y Hive (Standalone Setup)
+
+### Objetivos
+1. Entender el funcionamiento básico de Hadoop (HDFS y comandos esenciales).
+2. Conectar Hive con Hadoop para manejar datos estructurados.
+3. Configurar y validar un entorno con un único NameNode.
 
 ---
 
@@ -19,7 +26,9 @@
 ---
 
 ## Paso 2: Configurar Archivos para Hadoop y Hive
+
 ### Archivo `core-site.xml`
+Define el sistema de archivos predeterminado de Hadoop.
 ```xml
 <?xml version="1.0"?>
 <configuration>
@@ -32,6 +41,7 @@
 Guarda este archivo como `config/core-site.xml`.
 
 ### Archivo `hdfs-site.xml`
+Configura las propiedades de almacenamiento de Hadoop.
 ```xml
 <?xml version="1.0"?>
 <configuration>
@@ -52,6 +62,7 @@ Guarda este archivo como `config/core-site.xml`.
 Guarda este archivo como `config/hdfs-site.xml`.
 
 ### Archivo `hive-site.xml`
+Configura las propiedades de Hive para la conexión con el metastore.
 ```xml
 <?xml version="1.0"?>
 <configuration>
@@ -78,6 +89,7 @@ Guarda este archivo como `config/hive-site.xml`.
 ---
 
 ## Paso 3: Crear el Archivo `docker-compose.yml`
+Configura los servicios de Docker para NameNode, DataNode y Hive.
 ```yaml
 version: '3.8'
 
@@ -86,64 +98,52 @@ services:
     image: apache/hadoop:3.4.1
     container_name: namenode
     hostname: namenode
+    platform: linux/amd64
     ports:
-      - "9870:9870" # Web UI for NameNode
-      - "9000:9000" # RPC for HDFS
+      - "9870:9870" # Web UI para NameNode
+      - "9000:9000" # RPC para HDFS
+      - "9001:9001" # Servicio RPC para NameNode
     volumes:
       - namenode_data:/hadoop/dfs/name
-      - ./config/core-site.xml:/etc/hadoop/core-site.xml
-      - ./config/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
-    command: ["namenode"]
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    command: ["/opt/hadoop/bin/hdfs", "namenode"]
 
   datanode:
     image: apache/hadoop:3.4.1
+    platform: linux/amd64    
     container_name: datanode
     hostname: datanode
     depends_on:
       - namenode
     ports:
-      - "9864:9864" # Web UI for DataNode
+      - "9864:9864" # Web UI para DataNode
     volumes:
-      - datanode_data:/hadoop/dfs/data
-      - ./config/core-site.xml:/etc/hadoop/core-site.xml
-      - ./config/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
-    command: ["datanode"]
-
-  hive:
-    image: apache/hive:4.0.0
-    container_name: hive-server
-    hostname: hive-server
-    depends_on:
-      - namenode
-    ports:
-      - "10000:10000" # HiveServer2 Thrift port
-    environment:
-      - HADOOP_HOME=/opt/hadoop
-      - HIVE_HOME=/opt/hive
-    volumes:
-      - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml
-    command: ["hiveserver2"]
+      - datanode_data:/hadoop/dfs/datanode
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    command: ["/opt/hadoop/bin/hdfs", "datanode"]
 
 volumes:
   namenode_data:
   datanode_data:
 ```
-Guarda este archivo en la raíz como `docker-compose.yml`.
 
 ---
 
 ## Paso 4: Ejecutar el Entorno
-1. Ejecuta el siguiente comando:
+1. Inicia los servicios definidos en `docker-compose.yml`:
    ```bash
    docker-compose up -d
    ```
-2. Valida:
-   - NameNode UI: [http://localhost:9870](http://localhost:9870).
-   - HiveServer2 en el puerto `10000`.
+2. Valida que los servicios estén activos:
+   - Interfaz web del NameNode: [http://localhost:9870](http://localhost:9870).
+   - Interfaz web del DataNode: [http://localhost:9864](http://localhost:9864).
 
 ---
 
 ## Paso 5: Subir los Datasets y Configurar Hive
+
 ### Subir Archivos al HDFS
 1. **Crea un directorio para los datasets:**
    ```bash
@@ -208,52 +208,67 @@ Guarda este archivo en la raíz como `docker-compose.yml`.
 
 ---
 
-# Módulo 2: Configuración de un Clúster Hadoop Multi-Node
+## Paso 6: Anexo: Comandos Comunes de Docker
 
-## Objetivos
-1. Configurar un clúster con un NameNode y múltiples DataNodes.
-2. Verificar la redundancia de datos.
-3. Usar Hive en un entorno distribuido.
+### Validar el Estado de los Contenedores
+- Lista los contenedores activos:
+  ```bash
+  docker ps
+  ```
+- Lista todos los contenedores (activos e inactivos):
+  ```bash
+  docker ps -a
+  ```
+
+### Revisar Logs
+- Ver los logs de un contenedor específico:
+  ```bash
+  docker logs <nombre_contenedor>
+  ```
+- Ver logs en tiempo real:
+  ```bash
+  docker logs -f <nombre_contenedor>
+  ```
+
+### Detener y Eliminar Contenedores
+- Detener todos los contenedores en ejecución:
+  ```bash
+  docker stop $(docker ps -q)
+  ```
+- Eliminar todos los contenedores:
+  ```bash
+  docker rm $(docker ps -aq)
+  ```
+
+### Gestionar Imágenes
+- Lista todas las imágenes locales:
+  ```bash
+  docker images
+  ```
+- Eliminar imágenes no utilizadas:
+  ```bash
+  docker image prune
+  ```
+
+### Gestionar Volúmenes
+- Lista todos los volúmenes existentes:
+  ```bash
+  docker volume ls
+  ```
+- Eliminar volúmenes no utilizados:
+  ```bash
+  docker volume prune
+  ```
+
+### Depuración de Redes
+- Lista todas las redes creadas por Docker:
+  ```bash
+  docker network ls
+  ```
+- Inspecciona una red específica:
+  ```bash
+  docker network inspect <nombre_red>
+  ```
 
 ---
 
-## Paso 1: Adaptar el Archivo `docker-compose.yml`
-Añade más DataNodes:
-```yaml
-  datanode2:
-    image: apache/hadoop:3.4.1
-    container_name: datanode2
-    hostname: datanode2
-    depends_on:
-      - namenode
-    ports:
-      - "9865:9864"
-    volumes:
-      - datanode_data2:/hadoop/dfs/data
-      - ./config/core-site.xml:/etc/hadoop/core-site.xml
-      - ./config/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
-    command: ["datanode"]
-
-volumes:
-  datanode_data2:
-```
-
----
-
-## Paso 2: Probar el Clúster
-1. **Subir un archivo al clúster:**
-   ```bash
-   docker exec -it namenode hadoop fs -put example.txt /
-   ```
-2. **Verificar replicación:**
-   ```bash
-   docker exec -it namenode hadoop fs -ls / | grep example.txt
-   ```
-
-## Paso 3: Consultas Distribuidas con Hive
-Realiza las mismas consultas del módulo 1, ahora sobre el clúster configurado.
-
----
-
-## Conclusión
-Has configurado y probado Hadoop y Hive en configuraciones standalone y multi-node. Esto te da una visión completa de cómo funcionan estas tecnologías.
