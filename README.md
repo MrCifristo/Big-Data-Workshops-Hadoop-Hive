@@ -325,6 +325,3 @@ Ejecuta las mismas consultas del módulo anterior para verificar el funcionamien
   ```
 
 ---
-
-Con esta guía detallada, estarás preparado para configurar y administrar un entorno de Hadoop y Hive en Docker, ya sea standalone o en un clúster multi-node. ¡Buena suerte y no dudes en consultar cualquier duda! 😊
-
