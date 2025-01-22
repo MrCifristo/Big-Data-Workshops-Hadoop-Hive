@@ -208,6 +208,60 @@ volumes:
 
 ---
 
+## Módulo 2: Configuración de un Clúster Hadoop Multi-Node
+
+### Objetivos
+1. Configurar un clúster con un NameNode y múltiples DataNodes.
+2. Verificar la redundancia de datos.
+3. Ejecutar consultas distribuidas en Hive.
+
+---
+
+### Paso 1: Ampliar el Archivo `docker-compose.yml`
+
+Añade más DataNodes para simular un entorno distribuido.
+
+```yaml
+  datanode2:
+    image: apache/hadoop:3.4.1
+    platform: linux/amd64
+    container_name: datanode2
+    hostname: datanode2
+    depends_on:
+      - namenode
+    ports:
+      - "9865:9864" # Web UI para DataNode 2
+    volumes:
+      - datanode_data2:/hadoop/dfs/data
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    command: ["/opt/hadoop/bin/hdfs", "datanode"]
+
+volumes:
+  datanode_data2:
+```
+
+---
+
+### Paso 2: Validar la Configuración del Clúster
+
+1. **Sube un archivo al clúster:**
+   ```bash
+   docker exec -it namenode hadoop fs -put example.txt /
+   ```
+2. **Verifica la replicación del archivo:**
+   ```bash
+   docker exec -it namenode hadoop fs -ls /
+   ```
+
+---
+
+### Paso 3: Consultas Distribuidas con Hive
+
+Ejecuta las mismas consultas del módulo anterior para verificar el funcionamiento en el entorno multi-node. Asegúrate de que las tablas estén correctamente configuradas y que los datos sean accesibles en el clúster.
+
+---
+
 ## Paso 6: Anexo: Comandos Comunes de Docker
 
 ### Validar el Estado de los Contenedores
@@ -271,4 +325,6 @@ volumes:
   ```
 
 ---
+
+Con esta guía detallada, estarás preparado para configurar y administrar un entorno de Hadoop y Hive en Docker, ya sea standalone o en un clúster multi-node. ¡Buena suerte y no dudes en consultar cualquier duda! 😊
 
