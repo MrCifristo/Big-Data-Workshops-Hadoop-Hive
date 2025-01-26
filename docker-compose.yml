@@ -1,0 +1,71 @@
+services:
+  namenode:
+    image: apache/hadoop:3.4.1
+    container_name: namenode
+    hostname: namenode
+    platform: linux/amd64
+    ports:
+      - "9870:9870" # Web UI para NameNode
+      - "9000:9000" # RPC para HDFS
+      - "9001:9001" # Servicio RPC para NameNode
+    user: root
+    volumes:
+      - ./namenode_data:/hadoop/dfs/name
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./dataset:/dataset #lixtocalixto
+    command: >
+      bash -c "
+      if [ ! -d /hadoop/dfs/name/current ]; then
+        mkdir -p /hadoop/dfs/name &&
+        /opt/hadoop/bin/hdfs namenode -format;
+      fi &&
+      /opt/hadoop/bin/hdfs namenode
+      "
+
+  datanode:
+    image: apache/hadoop:3.4.1
+    platform: linux/amd64    
+    container_name: datanode
+    hostname: datanode
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864" # Web UI para DataNode
+    volumes:
+      - ./datanode_data:/hadoop/dfs/data
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    command: >
+      bash -c "
+      mkdir -p /hadoop/dfs/data &&
+      /opt/hadoop/bin/hdfs datanode
+      "
+
+  metastore:
+    image: hive-metastore:3.1.2
+    container_name: metastore
+    hostname: metastore
+    environment:
+      HIVE_METASTORE_USER: hive
+      HIVE_METASTORE_PASSWORD: hive
+      HIVE_METASTORE_DB: metastore
+      HIVE_METASTORE_HOST: metastore
+      HIVE_METASTORE_PORT: 9083
+    ports:
+      - "9083:9083"
+
+  hive-server:
+    image: hive-server:3.1.2
+    container_name: hive-server
+    hostname: hive-server
+    depends_on:
+      - metastore
+    ports:
+      - "10000:10000"
+    environment:
+      HIVE_METASTORE_URI: thrift://metastore:9083
+    command: >
+      bash -c "
+      /opt/hive/bin/hive --service hiveserver2
+      "
