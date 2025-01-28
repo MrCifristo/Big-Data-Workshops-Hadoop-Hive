@@ -10,6 +10,7 @@ services:
       - "9000:9000"     # RPC HDFS
       - "9001:9001"
     volumes:
+      - ./dataset:/datasets
       - ./namenode_data:/hadoop/dfs/name
       - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
       - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
@@ -43,21 +44,25 @@ services:
 
   datanode2:
     image: apache/hadoop:3.4.1
-    platform: linux/amd64
     container_name: datanode2
     hostname: datanode2
+    platform: linux/amd64
     depends_on:
       - namenode
     ports:
-      - "9865:9864" # Web UI para DataNode 2
+      - "9865:9864"     # Web UI DataNode 2
     volumes:
-      - datanode_data2:/hadoop/dfs/data
+      - ./datanode2_data:/hadoop/dfs/data  # Define una carpeta específica
       - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
       - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
-    command: ["/opt/hadoop/bin/hdfs", "datanode"]
+    command: >
+      bash -c "
+      mkdir -p /hadoop/dfs/data &&
+      /opt/hadoop/bin/hdfs datanode
+      "
 
   hive-server:
-    image: apache/hive:3.1.3
+    image: bde2020/hive:latest
     container_name: hive-server
     hostname: hive-server
     platform: linux/amd64
@@ -65,10 +70,13 @@ services:
     depends_on:
       - namenode
       - datanode
+      - datanode2
     ports:
       - "10000:10000"   # HiveServer2 (JDBC)
       - "9083:9083"     # Metastore Thrift
     volumes:
+      - ./dataset:/datasets
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
       - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml
     environment:
       CORE_CONF_fs_defaultFS: "hdfs://namenode:9000"
@@ -79,13 +87,15 @@ services:
       - /bin/bash
       - -c
       - |
-        echo "Esperando 10 segundos para iniciar HiveServer2..."
+        echo "Inicializando el esquema de Hive..."
+        /opt/hive/bin/schematool -initSchema -dbType derby || echo "El esquema ya está inicializado."
+        echo "Iniciando el servicio Metastore..."
+        /opt/hive/bin/hive --service metastore &
         sleep 10
+        echo "Iniciando HiveServer2..."
         /opt/hive/bin/hive --service hiveserver2
-
-
 
 volumes:
   namenode_data:
   datanode_data:
-  datanode_data2:
+  datanode2_data:
