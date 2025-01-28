@@ -8,12 +8,11 @@ services:
     ports:
       - "9870:9870"     # Web UI NameNode
       - "9000:9000"     # RPC HDFS
-      - "9001:9001"     # RPC Service NameNode
+      - "9001:9001"
     volumes:
       - ./namenode_data:/hadoop/dfs/name
       - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
       - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
-      - ./dataset:/dataset   # Carpeta local con CSV, etc.
     command: >
       bash -c "
       if [ ! -d /hadoop/dfs/name/current ]; then
@@ -42,40 +41,51 @@ services:
       /opt/hadoop/bin/hdfs datanode
       "
 
-  metastore:
-    image: bde2020/hive-metastore-postgresql:latest
-    container_name: metastore
-    hostname: metastore
+  datanode2:
+    image: apache/hadoop:3.4.1
     platform: linux/amd64
+    container_name: datanode2
+    hostname: datanode2
+    depends_on:
+      - namenode
+    ports:
+      - "9865:9864" # Web UI para DataNode 2
+    volumes:
+      - datanode_data2:/hadoop/dfs/data
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    command: ["/opt/hadoop/bin/hdfs", "datanode"]
+
+  hive-server:
+    image: apache/hive:3.1.3
+    container_name: hive-server
+    hostname: hive-server
+    platform: linux/amd64
+    user: root
     depends_on:
       - namenode
       - datanode
     ports:
-      - "9083:9083"  # Puerto Thrift del Metastore
-    environment:
-      CORE_CONF_fs_defaultFS: "hdfs://namenode:9000"
-      # dejamos que la imagen use su start-metastore-postgresql
-    
-
-  hive-server:
-    image: bde2020/hive:latest
-    container_name: hive-server
-    hostname: hive-server
-    platform: linux/amd64
-    depends_on:
-      - metastore
-    ports:
-      - "10000:10000"   # Para Beeline / JDBC
+      - "10000:10000"   # HiveServer2 (JDBC)
+      - "9083:9083"     # Metastore Thrift
     volumes:
       - ./config/hive-site.xml:/opt/hive/conf/hive-site.xml
     environment:
       CORE_CONF_fs_defaultFS: "hdfs://namenode:9000"
-      # Avisamos al HiveServer dónde está el Metastore
-      HIVE_METASTORE_URI: "thrift://metastore:9083"
+      HIVE_METASTORE_URI: "thrift://hive-server:9083"
       HIVE_SERVER2_THRIFT_BIND_HOST: "0.0.0.0"
       HIVE_SERVER2_THRIFT_PORT: "10000"
-    command: ["/opt/hive/bin/hive", "--service", "hiveserver2"]
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        echo "Esperando 10 segundos para iniciar HiveServer2..."
+        sleep 10
+        /opt/hive/bin/hive --service hiveserver2
+
+
 
 volumes:
   namenode_data:
   datanode_data:
+  datanode_data2:
