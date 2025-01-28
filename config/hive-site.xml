@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <configuration>
+  <!-- Configuración Derby Embedded -->
   <property>
     <name>javax.jdo.option.ConnectionURL</name>
     <value>jdbc:derby:;databaseName=metastore_db;create=true</value>
@@ -8,6 +9,8 @@
     <name>javax.jdo.option.ConnectionDriverName</name>
     <value>org.apache.derby.jdbc.EmbeddedDriver</value>
   </property>
+
+  <!-- Rutas de almacén y scratch dir -->
   <property>
     <name>hive.metastore.warehouse.dir</name>
     <value>/user/hive/warehouse</value>
@@ -15,5 +18,15 @@
   <property>
     <name>hive.exec.scratchdir</name>
     <value>/tmp/hive</value>
+  </property>
+
+  <!-- FORZAR PUERTO Y HOST DE HIVE SERVER2 -->
+  <property>
+    <name>hive.server2.thrift.bind.host</name>
+    <value>0.0.0.0</value>
+  </property>
+  <property>
+    <name>hive.server2.thrift.port</name>
+    <value>10000</value>
   </property>
 </configuration>
